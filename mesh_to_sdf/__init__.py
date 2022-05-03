@@ -41,8 +41,26 @@ def mesh_to_sdf(mesh, query_points, surface_point_method='scan', sign_method='no
         raise ValueError('Unknown sign determination method: {:s}'.format(sign_method))
 
 
-def mesh_to_voxels(mesh, voxel_resolution=64, surface_point_method='scan', sign_method='normal', scan_count=100, scan_resolution=400, sample_point_count=10000000, normal_sample_count=11, pad=False, check_result=False, return_gradients=False):
+def mesh_to_voxels(mesh, voxel_resolution=64, surface_point_method='scan', sign_method='normal', scan_count=100, scan_resolution=400, sample_point_count=10000000, normal_sample_count=11, pad=False, check_result=False, return_gradients=False, bounds=None):
+    if bounds is not None:
+        # Create dummy cube as bounding box
+        size = bounds[1] - bounds[0]
+        box = trimesh.creation.box(size)
+
+        # Center to 0
+        box.vertices += (size / 2)
+        box.vertices += bounds[0]
+
+        # Add cube to mesh
+        mesh = trimesh.util.concatenate([box, mesh])
+
+    print(mesh.bounds)
     mesh = scale_to_unit_cube(mesh)
+    print(mesh.bounds)
+
+    if bounds is not None:
+        # Remove dummy cube
+        mesh.update_faces(np.concatenate([np.zeros(12, dtype=bool), np.ones(len(mesh.faces)-12, dtype=bool)]))
 
     surface_point_cloud = get_surface_point_cloud(mesh, surface_point_method, 3**0.5, scan_count, scan_resolution, sample_point_count, sign_method=='normal')
 
